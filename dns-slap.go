@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
-	"runtime/pprof"
 	"sync"
 	"time"
 )
@@ -21,13 +19,6 @@ type result struct {
 
 func main() {
 	flag.Parse()
-
-	f, err := os.Create("profile.prof")
-	if err != nil {
-		log.Fatal(err)
-	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
 
 	var results = make(chan *result, *concurrency**iterations)
 	var wg sync.WaitGroup
