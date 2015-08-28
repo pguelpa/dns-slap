@@ -11,6 +11,7 @@ import (
 
 var concurrency = flag.Int("concurrency", 10, "How many concurrent lookups to try")
 var iterations = flag.Int("iterations", 100, "How many times to lookup in each concurrent process")
+var thresholdMilli = flag.Int("threshold", 500, "How long to wait (in milliseconds) on a single lookup before considering it a failure")
 
 type result struct {
 	duration time.Duration
@@ -68,6 +69,8 @@ func work(index int, host string, count int, wg *sync.WaitGroup, results chan<- 
 	var duration time.Duration
 	var err error
 
+	threshold := time.Millisecond * time.Duration(*thresholdMilli)
+
 	for i := 0; i < count; i++ {
 		start = time.Now()
 		_, err = net.LookupHost(host)
@@ -75,7 +78,12 @@ func work(index int, host string, count int, wg *sync.WaitGroup, results chan<- 
 		if err != nil {
 			results <- &result{duration: duration, err: err}
 		} else {
-			results <- &result{duration: duration}
+			if duration > threshold {
+				err := fmt.Errorf("Lookup succeeded but took longer than the allowed threshold of %dms", *thresholdMilli)
+				results <- &result{duration: duration, err: err}
+			} else {
+				results <- &result{duration: duration}
+			}
 		}
 	}
 
