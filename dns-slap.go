@@ -39,28 +39,10 @@ func main() {
 
 	wg.Wait()
 	close(results)
+	errorsFound := report(results)
 
-	fmt.Printf("Workers finished, calculating results\n\n")
-
-	var totalDuration float64
-	var totalCount int
-	var errorCount int
-	var errorMap = make(map[string]int)
-
-	for result := range results {
-		totalDuration += result.duration.Seconds()
-		totalCount++
-		if result.err != nil {
-			errorMap[result.err.Error()]++
-			errorCount++
-		}
-	}
-
-	averageDuration := totalDuration / float64(totalCount)
-	fmt.Printf("Ran %d lookups in an average time of %f seconds\n", totalCount, averageDuration)
-	fmt.Printf("Found %d errors\n", errorCount)
-	for err, count := range errorMap {
-		fmt.Printf("\t%s returned %d times\n", err, count)
+	if errorsFound {
+		os.Exit(1)
 	}
 }
 
@@ -88,4 +70,65 @@ func work(index int, host string, count int, wg *sync.WaitGroup, results chan<- 
 	}
 
 	wg.Done()
+}
+
+// report pretty-prints the collected results and returns a boolean that
+// indicates whether or not any errors were found.
+func report(results chan *result) bool {
+	fmt.Printf("Workers finished, calculating results...\n\n")
+
+	var totalDuration float64
+	var totalCount int
+	var errorCount int
+	var errorMap = make(map[string]int)
+	var minDuration time.Duration
+	var maxDuration time.Duration
+	var zeroDuration time.Duration
+
+	for result := range results {
+		totalDuration += result.duration.Seconds()
+		totalCount++
+		if result.err != nil {
+			errorMap[result.err.Error()]++
+			errorCount++
+		}
+		// if min/maxDuration are set to the zero value then we unconditionally set them to the
+		// time of the current result in the loop. This should only run the first time through.
+		if minDuration == zeroDuration {
+			minDuration = result.duration
+		}
+		if maxDuration == zeroDuration {
+			maxDuration = result.duration
+		}
+		if result.duration < minDuration {
+			minDuration = result.duration
+		}
+		if result.duration > maxDuration {
+			maxDuration = result.duration
+		}
+	}
+
+	fmt.Println("Results")
+	fmt.Println("=======")
+	fmt.Println("")
+
+	fmt.Printf("Total lookups: %d\n", totalCount)
+	fmt.Printf("Total errors:  %d\n", errorCount)
+	fmt.Println("")
+
+	averageDuration := totalDuration / float64(totalCount)
+	fmt.Printf("Mean latency:  %fs\n", averageDuration)
+	fmt.Printf("Min latency:   %fs\n", minDuration.Seconds())
+	fmt.Printf("Max latency:   %fs\n", maxDuration.Seconds())
+
+	if errorCount > 0 {
+		fmt.Println("")
+		fmt.Println("Error details")
+		fmt.Printf("==============\n\n")
+		for err, count := range errorMap {
+			fmt.Printf("- %s (returned %d times)\n", err, count)
+		}
+		return true
+	}
+	return false
 }
