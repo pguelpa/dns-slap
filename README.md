@@ -26,7 +26,7 @@ Usage of dns-slap
 This is what happens when you run dns-slap
 
 ```
-% dns-slap -concurrency 100 -iterations 1000 -threshold 100 google.com
+% dns-slap -concurrency 100 -iterations 100 -threshold 100 google.com
 Starting 100 workers with 100 lookups each ...
 Workers finished, calculating results...
 
