@@ -26,10 +26,22 @@ Usage of dns-slap
 This is what happens when you run dns-slap
 
 ```
-% dns-slap -concurrency 100 -iterations 1000 google.com
-Starting 100 workers with 1000 lookups each ...
-Workers finished, calculating results
+% dns-slap -concurrency 100 -iterations 100 -threshold 100 google.com
+Starting 100 workers with 100 lookups each ...
+Workers finished, calculating results...
 
-Ran 100000 lookups in an average time of 0.017077 seconds
-Found 0 errors
+Results
+=======
+
+Total lookups: 10000
+Total errors:  12
+
+Mean latency:  0.030548s
+Min latency:   0.000508s
+Max latency:   0.114726s
+
+Error details
+==============
+
+- Lookup succeeded but took longer than the allowed threshold of 100ms (returned 12 times)
 ```
